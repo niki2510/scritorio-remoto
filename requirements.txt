@@ -1,0 +1,10 @@
+Flask>=3.0,<4.0
+Flask-SocketIO>=5.3,<6.0
+python-socketio>=5.11,<6.0
+simple-websocket>=1.0
+mss>=9.0.1
+Pillow>=10.3
+pynput>=1.7.7
+Werkzeug>=3.0
+PyYAML>=6.0
+pyftpdlib>=2.0,<3.0

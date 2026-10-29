@@ -1,0 +1,26 @@
+name: Informe de error
+description: Comunica un fallo reproducible sin incluir datos sensibles
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: textarea
+    attributes:
+      label: Descripción
+      description: ¿Qué ocurrió y qué esperabas que ocurriera?
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Sistema y versión
+      placeholder: Ubuntu 24.04 X11 / Windows 11
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Pasos para reproducirlo
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Registros relevantes
+      description: Elimina contraseñas, tokens, IP privadas y nombres de dominio antes de pegarlos.

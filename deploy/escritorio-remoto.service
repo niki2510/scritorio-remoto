@@ -1,0 +1,21 @@
+[Unit]
+Description=Escritorio Remoto (Flask) - servidor de acceso remoto web
+After=network.target graphical.target
+
+[Service]
+# Ajusta User/Group y rutas a tu instalación. Debe ejecutarse en una sesión
+# con acceso a la pantalla (X11): usa XAUTHORITY/DISPLAY del usuario de escritorio.
+Type=simple
+User=TU_USUARIO
+Group=TU_USUARIO
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/TU_USUARIO/.Xauthority
+Environment=RDWEB_HOST=0.0.0.0
+Environment=RDWEB_PORT=5000
+WorkingDirectory=/opt/escritorio-remoto
+ExecStart=/opt/escritorio-remoto/venv/bin/python /opt/escritorio-remoto/app.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical.target

@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Escritorio Remoto</title>
+  <link rel="stylesheet" href="{{ asset_url('css/style.css') }}">
+</head>
+<body class="viewer-body viewer-immersive">
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="brand">🖥️ Escritorio Remoto</span>
+      <nav class="tabs" role="tablist">
+        <button class="tab-btn active" data-tab="viewer" type="button">Escritorio Web</button>
+        <button class="tab-btn" data-tab="windows" type="button">Aplicaciones</button>
+        <button class="tab-btn" data-tab="ftp" type="button">FTP</button>
+        <button class="tab-btn" data-tab="devices" type="button">Dispositivos Conectados</button>
+        <button class="tab-btn" data-tab="settings" type="button">Configuración</button>
+        <button class="tab-btn" data-tab="help" type="button">Ayuda</button>
+      </nav>
+    </div>
+    <div class="topbar-right">
+      <span id="status" class="status status-connecting">Conectando…</span>
+      <span class="user">{{ username }}</span>
+      <a class="logout" href="{{ url_for('logout') }}">Salir</a>
+    </div>
+  </header>
+
+  <!-- ===================== Pestaña: Visor ===================== -->
+  <main id="tab-viewer" class="tab-panel active">
+    <div class="viewer-toolbar">
+      <button id="toggle-toolbar-btn" type="button" title="Ocultar controles">−</button>
+      <input id="text-input" type="text" placeholder="Escribir texto en el equipo remoto…">
+      <button id="send-text-btn" title="Enviar texto escrito al equipo remoto">Enviar</button>
+      <button id="fullscreen-btn" title="Pantalla completa">⛶</button>
+    </div>
+    <div id="canvas-wrapper" class="canvas-wrapper">
+      <canvas id="screen" tabindex="0"></canvas>
+      <div id="remote-cursor" class="remote-cursor" aria-hidden="true">
+        <svg class="cursor-arrow" viewBox="0 0 24 24" width="24" height="24">
+          <path d="M3 2 L3 20 L8 16 L11 22 L14 20.5 L11 14.5 L17 14.5 Z"
+                fill="#ffffff" stroke="#000000" stroke-width="1.3" stroke-linejoin="round"/>
+        </svg>
+        <svg class="cursor-hand" viewBox="0 0 24 24" width="26" height="26">
+          <path d="M9 12.5 V5.5 a1.5 1.5 0 0 1 3 0 V11 M12 11 V4 a1.5 1.5 0 0 1 3 0 V11
+                   M15 11 V6 a1.5 1.5 0 0 1 3 0 V13 M9 12.5 L7.3 10.8 a1.4 1.4 0 0 0 -2 2
+                   L8.5 17.5 C9.5 20 11 21 14 21 H16.5 C19 21 20.5 19 20.5 16.5 V11
+                   a1.5 1.5 0 0 0 -2.5 -1"
+                fill="#ffffff" stroke="#000000" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================== Pestaña: cliente ↔ servidor ===================== -->
+  <main id="tab-ftp" class="tab-panel ftp-workspace">
+    <div class="ftp-workspace-header">
+      <div>
+        <h1>Archivos · Cliente ↔ Servidor</h1>
+        <p>El servidor es este equipo remoto; el cliente es el dispositivo desde el que te conectas.</p>
+      </div>
+      <button id="ftp-server-refresh" type="button">Actualizar servidor</button>
+    </div>
+    <div class="ftp-dual-pane">
+      <section class="ftp-pane ftp-client-pane">
+        <h2 id="client-device-title">💻 Cliente · este dispositivo</h2>
+        <div class="client-file-actions">
+          <select id="ftp-agent-select" title="Agente local que recibirá las descargas FTP">
+            <option value="">Selecciona agente FTP</option>
+          </select>
+          <button id="install-windows-agent" type="button">Activar agente Windows</button>
+          <button id="client-select-files" type="button">Seleccionar archivos</button>
+          <button id="client-select-folder" type="button">Seleccionar carpeta</button>
+          <button id="client-upload-all" type="button">Subir todo →</button>
+          <input id="client-files-input" class="native-file-input" type="file" multiple>
+          <input id="client-folder-input" class="native-file-input" type="file" webkitdirectory directory mozdirectory multiple>
+        </div>
+        <div class="ftp-pathbar">
+          <button id="client-folder-up" title="Subir un nivel">⬆</button>
+          <span id="client-folder-path">Selecciona una carpeta del cliente</span>
+          <button id="client-new-file" type="button" title="Nuevo archivo">＋ Archivo</button>
+          <button id="client-new-folder" type="button" title="Nueva carpeta">＋ Carpeta</button>
+        </div>
+        <div id="client-drop-zone" class="ftp-table-wrap client-drop-zone">
+          <table class="file-table ftp-table">
+            <thead><tr><th></th><th>Nombre</th><th>Tamaño</th><th>Modificado</th><th></th></tr></thead>
+            <tbody id="client-files-body"></tbody>
+          </table>
+          <div class="ftp-empty" id="client-files-empty">Arrastra aquí archivos o carpetas de tu dispositivo.</div>
+        </div>
+      </section>
+
+      <div class="ftp-transfer-arrow" aria-hidden="true">⇄</div>
+
+      <section class="ftp-pane ftp-server-pane">
+        <h2>🖥️ Servidor · equipo remoto</h2>
+        <div class="ftp-pathbar">
+          <button id="ftp-server-up" title="Subir un nivel">⬆</button>
+          <span id="ftp-server-path">/</span>
+          <button id="ftp-server-newfile" title="Nuevo archivo">＋ Archivo</button>
+          <button id="ftp-server-mkdir" title="Nueva carpeta">＋ Carpeta</button>
+        </div>
+        <div id="server-drop-zone" class="ftp-table-wrap">
+          <table class="file-table ftp-table">
+            <thead><tr><th></th><th>Nombre</th><th>Tamaño</th><th>Modificado</th><th></th></tr></thead>
+            <tbody id="ftp-server-body"></tbody>
+          </table>
+          <div class="ftp-empty" id="ftp-server-empty">Cargando archivos del servidor…</div>
+        </div>
+      </section>
+    </div>
+    <div class="transfer-status">
+      <div id="ftp-transfer-log" class="ftp-transfer-log">Listo.</div>
+      <div id="transfer-progress" class="transfer-progress" hidden>
+        <div><span id="transfer-progress-detail"></span><strong id="transfer-progress-percent">0%</strong></div>
+        <progress id="transfer-progress-bar" max="100" value="0"></progress>
+        <div id="transfer-actions" class="transfer-actions" hidden>
+          <button id="transfer-pause" type="button">Pausar</button>
+          <button id="transfer-resume" type="button" hidden>Reanudar</button>
+          <button id="transfer-stop" type="button" class="danger">Detener</button>
+          <button id="transfer-retry" type="button" hidden>Reintentar descarga</button>
+        </div>
+      </div>
+    </div>
+    <div id="text-editor" class="text-editor" hidden>
+      <div class="text-editor-box" role="dialog" aria-modal="true" aria-labelledby="text-editor-title">
+        <div class="text-editor-head">
+          <strong id="text-editor-title"></strong>
+          <span id="text-editor-status"></span>
+        </div>
+        <textarea id="text-editor-content" spellcheck="false"></textarea>
+        <div class="text-editor-actions">
+          <button id="text-editor-cancel" type="button">Cancelar</button>
+          <button id="text-editor-save" type="button">Guardar (Ctrl+S)</button>
+        </div>
+      </div>
+    </div>
+    <div id="agent-folder-dialog" class="folder-dialog" hidden>
+      <div class="folder-dialog-box" role="dialog" aria-modal="true" aria-labelledby="agent-folder-title">
+        <div class="folder-dialog-head">
+          <div>
+            <span class="folder-dialog-kicker">DESTINO FTP</span>
+            <h2 id="agent-folder-title">Seleccionar carpeta en Windows</h2>
+          </div>
+          <button id="agent-folder-close" class="folder-dialog-close" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <div class="folder-dialog-address">
+          <button id="agent-folder-up-dialog" type="button" title="Subir un nivel">↑</button>
+          <input id="agent-folder-path-input" type="text" spellcheck="false" placeholder="C:\\Users\\usuario\\Documentos">
+          <button id="agent-folder-go" type="button">Ir</button>
+        </div>
+        <div class="folder-dialog-search">
+          <span aria-hidden="true">⌕</span>
+          <input id="agent-folder-search" type="search" autocomplete="off" placeholder="Buscar carpetas por nombre…" aria-label="Buscar carpetas">
+          <button id="agent-folder-search-clear" type="button" title="Borrar búsqueda">×</button>
+        </div>
+        <div id="agent-folder-status" class="folder-dialog-status">Cargando unidades…</div>
+        <div id="agent-folder-list" class="folder-dialog-grid"></div>
+        <div class="folder-dialog-actions">
+          <button id="agent-folder-cancel" type="button">Cancelar</button>
+          <button id="agent-folder-use" class="folder-dialog-use" type="button">Usar esta carpeta</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================== Pestaña: Escritorio Windows ===================== -->
+  <main id="tab-windows" class="tab-panel app-download-panel">
+    <section class="card download-card">
+      <div class="download-icon">🪟</div>
+      <h1>Escritorio Remoto para Windows</h1>
+      <p>
+        Descarga el cliente, descomprímelo en tu equipo Windows y ejecuta
+        <code>Escritorio-Remoto-Bravo.exe</code>. No necesita Python: introduce
+        la dirección del servidor y accede al escritorio desde su propia ventana.
+      </p>
+      <div id="ftp-download-status" class="info-banner">Consultando el modo FTP…</div>
+      <a id="windows-download-btn" class="primary-download" href="/api/windows/download">
+        Descargar aplicación Windows (.zip)
+      </a>
+      <a class="primary-download linux-download" href="/api/linux/download">
+        Descargar aplicación Linux (.zip)
+      </a>
+      <div id="ftp-server-details" class="ftp-details" hidden></div>
+      <p class="hint">
+        Los clientes nativos Windows y Linux pueden listar las unidades y directorios
+        locales automáticamente. Desde FTP podrás transferirlos a este servidor.
+      </p>
+    </section>
+  </main>
+
+  <!-- ===================== Pestaña: Dispositivos conectados ===================== -->
+  <main id="tab-devices" class="tab-panel devices-panel">
+    <div class="devices-header">
+      <div><h1>Dispositivos conectados</h1><p id="devices-count">Cargando conexiones…</p></div>
+      <div class="device-identity">
+        <label for="device-username">Tu nombre en el chat</label>
+        <input id="device-username" maxlength="40" autocomplete="nickname" placeholder="Elige un nombre">
+        <button id="device-name-save" type="button">Guardar nombre</button>
+        <button id="devices-refresh" type="button">Actualizar</button>
+        <span id="device-name-status" class="device-name-status"></span>
+      </div>
+    </div>
+    <div class="devices-layout">
+      <aside id="devices-list" class="devices-list" aria-label="Lista de dispositivos"></aside>
+      <section id="device-detail" class="device-detail">
+        <div id="device-empty" class="devices-empty">Selecciona un dispositivo para ver su información y chatear.</div>
+        <div id="device-content" hidden>
+          <h2 id="device-name"></h2>
+          <p id="device-description" class="hint"></p>
+          <div id="device-network-status" class="network-status"></div>
+          <label id="device-info-toggle-wrap" class="device-info-toggle">
+            <input id="device-info-toggle" type="checkbox">
+            Mostrar información del dispositivo
+          </label>
+          <dl id="device-info" class="device-info"></dl>
+          <div class="chat-box">
+            <h3 id="chat-title">Chat privado</h3>
+            <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
+            <form id="chat-form" class="chat-form">
+              <input id="chat-input" maxlength="2000" autocomplete="off" placeholder="Escribe un mensaje…">
+              <button type="submit">Enviar</button>
+            </form>
+            <div id="chat-status" class="form-msg"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <details id="agent-setup" class="agent-setup">
+      <summary>Instalar agente local en otro ordenador</summary>
+      <p>El agente obtiene directamente del sistema la IP local, interfaz, puerta de enlace, Wi-Fi, hostname y usuario, y recibe las descargas FTP. Está disponible para Ubuntu/Linux y Windows.</p>
+      <div class="agent-downloads">
+        <a href="/api/device-agent/download/agent">Descargar agente</a>
+        <a href="/api/device-agent/download/requirements">Dependencias</a>
+        <a href="/api/device-agent/download/linux-service">Servicio Linux</a>
+        <a href="/api/device-agent/download/linux-installer">Instalador Linux</a>
+        <a href="/api/device-agent/download/windows-installer">Instalador Windows</a>
+      </div>
+      <strong>Ubuntu/Linux</strong>
+      <pre id="agent-command">Abre esta sección para generar el comando autenticado.</pre>
+      <strong>Windows PowerShell</strong>
+      <pre id="agent-windows-command">Abre esta sección para generar el comando autenticado.</pre>
+    </details>
+  </main>
+
+  <!-- ===================== Pestaña: Ayuda ===================== -->
+  <main id="tab-help" class="tab-panel help-panel">
+    <div class="help-hero">
+      <div>
+        <span class="help-kicker">GUÍA DEL USUARIO</span>
+        <h1>Cómo usar Escritorio Remoto</h1>
+        <p>Controla otro equipo, intercambia archivos y conecta dispositivos desde una sola interfaz.</p>
+      </div>
+      <a class="help-start" href="#help-first-steps">Primeros pasos</a>
+    </div>
+    <nav class="help-index" aria-label="Índice de ayuda">
+      <a href="#help-first-steps">Empezar</a><a href="#help-desktop">Escritorio</a>
+      <a href="#help-files">Archivos</a><a href="#help-devices">Dispositivos</a>
+      <a href="#help-access">Acceso remoto</a><a href="#help-security">Seguridad</a>
+      <a href="#help-problems">Problemas frecuentes</a>
+    </nav>
+    <div class="help-grid">
+      <section id="help-first-steps" class="help-card help-wide">
+        <h2>1. Primeros pasos</h2>
+        <ol class="help-steps">
+          <li><strong>Inicia el servidor</strong><span>Ejecuta <code>run.sh</code> en Linux o <code>run.bat</code> en Windows en el equipo que vas a controlar.</span></li>
+          <li><strong>Abre la dirección</strong><span>Desde otro dispositivo entra en <code>http://IP-DEL-EQUIPO:5000</code>, o usa el dominio configurado.</span></li>
+          <li><strong>Inicia sesión</strong><span>Usa las credenciales mostradas en el primer arranque. Puedes cambiarlas en Configuración.</span></li>
+          <li><strong>Controla el equipo</strong><span>En Escritorio Web, haz clic sobre la imagen para activar teclado y ratón.</span></li>
+        </ol>
+        <div class="help-note">El equipo remoto debe estar encendido, conectado a la red y con una sesión gráfica activa. En Linux se recomienda X11/Xorg.</div>
+      </section>
+      <section id="help-desktop" class="help-card">
+        <h2>Escritorio Web</h2>
+        <ul><li>Mueve y pulsa el ratón directamente sobre la imagen.</li><li>Haz clic en el escritorio antes de escribir con el teclado.</li><li>Usa «Enviar» para pegar textos completos.</li><li>El botón ⛶ activa la pantalla completa.</li><li>Ajusta calidad y FPS en Configuración.</li></ul>
+      </section>
+      <section id="help-files" class="help-card">
+        <h2>Archivos y FTP</h2>
+        <ul><li>En FTP, el panel izquierdo es tu dispositivo y el derecho el servidor remoto.</li><li>Selecciona archivos o una carpeta y usa «Subir todo →».</li><li>Para descargar, selecciona un agente local o usa la acción del archivo.</li><li>Configuración permite crear, borrar, subir y descargar carpetas.</li></ul>
+        <p class="help-tip"><strong>Consejo:</strong> el navegador necesita que selecciones la carpeta local por seguridad.</p>
+      </section>
+      <section id="help-devices" class="help-card">
+        <h2>Dispositivos conectados</h2>
+        <p>Consulta navegadores y agentes conectados, asigna tu nombre y abre un chat privado. El agente local añade datos reales de red y permite recibir transferencias.</p>
+        <p>La propia pestaña ofrece instaladores para Linux y Windows. Instálalo solo en equipos de confianza.</p>
+      </section>
+      <section id="help-access" class="help-card">
+        <h2>Acceder desde fuera</h2>
+        <p>Se recomienda una VPN o Cloudflare Tunnel con HTTPS. Redirigir un puerto del router expone el servicio a Internet y exige más protección.</p>
+        <p>Configura el dominio y el túnel en Configuración. Si cambias de red, comprueba que servidor y túnel siguen activos.</p>
+      </section>
+      <section id="help-security" class="help-card help-wide">
+        <h2>Uso seguro</h2>
+        <div class="help-columns">
+          <ul><li>Cambia la contraseña inicial y no la reutilices.</li><li>Prefiere HTTPS, VPN o un túnel autenticado.</li><li>No compartas tokens, contraseñas FTP ni archivos de <code>instance/</code>.</li></ul>
+          <ul><li>Limita la carpeta publicada por el gestor.</li><li>Cierra sesión en equipos compartidos.</li><li>Mantén dependencias y sistema actualizados.</li></ul>
+        </div>
+      </section>
+      <section id="help-problems" class="help-card help-wide">
+        <h2>Problemas frecuentes</h2>
+        <details><summary>La pantalla aparece negra o no se actualiza</summary><p>Comprueba que hay una sesión gráfica activa. En Linux usa Xorg/X11; Wayland restringe captura y control.</p></details>
+        <details><summary>El teclado o el ratón no responden</summary><p>Haz clic sobre el escritorio para darle foco. En Windows, UAC y la pantalla de inicio pueden bloquear la entrada por diseño.</p></details>
+        <details><summary>No puedo conectar desde otro equipo</summary><p>Verifica red, puerto 5000 y que firewall, VPN, proxy o túnel permiten HTTP y WebSocket.</p></details>
+        <details><summary>La conexión va lenta</summary><p>Reduce FPS, calidad JPEG y ancho máximo en Configuración. Una red por cable suele ser más estable.</p></details>
+        <details><summary>No puedo mover archivos</summary><p>Revisa permisos, espacio libre y tamaño. Para acceder al disco del cliente instala y selecciona el agente local.</p></details>
+      </section>
+    </div>
+  </main>
+
+  <!-- ===================== Pestaña: Configuración ===================== -->
+  <main id="tab-settings" class="tab-panel">
+    <div class="settings-grid">
+
+      <section class="card">
+        <h2>Transmisión de pantalla</h2>
+        <p class="hint">Se aplican al instante, sin reiniciar el servidor.</p>
+        <label for="set-fps">Fotogramas por segundo (1-30)</label>
+        <input id="set-fps" type="number" min="1" max="30">
+        <label for="set-quality">Calidad JPEG (10-95)</label>
+        <input id="set-quality" type="number" min="10" max="95">
+        <label for="set-maxwidth">Ancho máximo (px)</label>
+        <input id="set-maxwidth" type="number" min="320" max="7680">
+        <button id="save-stream-btn">Guardar</button>
+        <div id="stream-msg" class="form-msg"></div>
+      </section>
+
+      <section class="card">
+        <h2>Credenciales de acceso</h2>
+        <label for="cred-username">Usuario</label>
+        <input id="cred-username" type="text" autocomplete="off">
+        <label for="cred-current">Contraseña actual</label>
+        <input id="cred-current" type="password" autocomplete="off">
+        <label for="cred-new">Nueva contraseña (vacío = no cambiar)</label>
+        <input id="cred-new" type="password" autocomplete="new-password">
+        <label for="cred-new-confirm">Confirmar nueva contraseña</label>
+        <input id="cred-new-confirm" type="password" autocomplete="new-password">
+        <button id="save-credentials-btn">Actualizar</button>
+        <div id="cred-msg" class="form-msg"></div>
+      </section>
+
+      <section class="card wide">
+        <h2>Servidor FTP del equipo remoto</h2>
+        <p class="hint">
+          Este equipo es siempre el servidor/origen. Los clientes son el navegador
+          web y la aplicación Windows conectados a él.
+        </p>
+        <label for="ftp-mode" hidden>Modo de funcionamiento</label>
+        <select id="ftp-mode" hidden>
+          <option value="server">Servidor FTP</option>
+          <option value="client">Cliente FTP</option>
+        </select>
+
+        <div id="ftp-server-settings" class="ftp-config-grid">
+          <label class="check-row"><input id="ftp-server-enabled" type="checkbox"> Activar servidor FTP</label>
+          <label>Escuchar en<input id="ftp-server-host" type="text" placeholder="0.0.0.0"></label>
+          <label>Host público<input id="ftp-server-public-host" type="text" placeholder="ftp.ejemplo.com"></label>
+          <label>Puerto<input id="ftp-server-port" type="number" min="1" max="65535"></label>
+          <label>Usuario<input id="ftp-server-username" type="text" autocomplete="off"></label>
+          <label>Contraseña<input id="ftp-server-password" type="password" autocomplete="new-password" placeholder="Vacío = conservar"></label>
+          <label class="wide-field">Carpeta publicada<input id="ftp-server-root" type="text"></label>
+        </div>
+        <p class="hint">Entre redes distintas deben permitirse TCP 2121 y el rango pasivo TCP 30000–30049 hacia este servidor.</p>
+
+        <div id="ftp-client-settings" class="ftp-config-grid" hidden>
+          <label>Servidor FTP<input id="ftp-client-host" type="text" placeholder="ftp.ejemplo.com"></label>
+          <label>Puerto<input id="ftp-client-port" type="number" min="1" max="65535"></label>
+          <label>Usuario<input id="ftp-client-username" type="text" autocomplete="off"></label>
+          <label>Contraseña<input id="ftp-client-password" type="password" autocomplete="new-password" placeholder="Vacío = conservar"></label>
+          <label class="check-row"><input id="ftp-client-tls" type="checkbox"> Usar FTPS explícito (TLS)</label>
+          <label class="wide-field">Ruta remota del ZIP<input id="ftp-client-remote-path" type="text" placeholder="/escritorio-remoto-windows.zip"></label>
+        </div>
+        <button id="save-ftp-settings-btn">Guardar y aplicar FTP</button>
+        <div id="ftp-settings-msg" class="form-msg"></div>
+      </section>
+
+      <section class="card wide">
+        <h2>Acceso directo por IP pública y router</h2>
+        <p class="hint">Alternativa a Cloudflare Tunnel. Configura en el router una redirección TCP desde la IP y puerto públicos hacia la IP local de este servidor.</p>
+        <div class="info-banner">⚠️ Este modo expone el servicio directamente a Internet. Usa una contraseña robusta y HTTPS siempre que sea posible.</div>
+        <div class="ftp-config-grid">
+          <label class="check-row"><input id="direct-enabled" type="checkbox"> Activar como método alternativo</label>
+          <label>Protocolo<select id="direct-protocol"><option value="https">HTTPS</option><option value="http">HTTP</option></select></label>
+          <label>IP pública o dominio<input id="direct-public-ip" type="text" placeholder="203.0.113.10"></label>
+          <label>Puerto público<input id="direct-public-port" type="number" min="1" max="65535" value="5000"></label>
+          <label>IP local del servidor<input id="direct-local-ip" type="text" placeholder="192.168.1.100"></label>
+          <label>Puerto local<input id="direct-local-port" type="number" min="1" max="65535" value="5000"></label>
+        </div>
+        <div id="direct-rule" class="ftp-details"></div>
+        <button id="save-direct-access-btn" type="button">Guardar acceso directo</button>
+        <div id="direct-access-msg" class="form-msg"></div>
+      </section>
+
+      <section class="card wide">
+        <h2>Exponer con subdominio (Cloudflare Tunnel)</h2>
+        <div class="info-banner">
+          ⚠️ Antes de generar un subdominio para acceder a <strong>este equipo</strong>
+          desde otra ubicación, asegúrate de que esta aplicación esté instalada y en
+          ejecución en el equipo que quieres controlar de forma remota.
+          ¿Aún no la tienes instalada allí?
+          <a id="download-app-link" href="/api/download/app">Descargar aplicación (.zip)</a>
+        </div>
+
+        <label for="cf-hostname">Subdominio completo (p. ej. <code>oficina1.miempresa.es</code>)</label>
+        <div class="inline-row">
+          <input id="cf-hostname" type="text" placeholder="subdominio.dominio.com">
+          <button id="cf-generate-btn">Generar y Configurar</button>
+        </div>
+        <p class="hint">
+          Funciona para cualquier dominio registrado en tu cuenta de Cloudflare
+          (.com, .es, .net...). Requiere tener <code>cloudflared</code> ya autenticado
+          en este equipo y un túnel existente (ver opciones avanzadas).
+        </p>
+
+        <details class="advanced">
+          <summary>Opciones avanzadas del túnel</summary>
+          <label for="cf-tunnel">Nombre/ID del túnel</label>
+          <input id="cf-tunnel" type="text">
+          <label for="cf-config">Ruta del fichero de configuración (.yml)</label>
+          <input id="cf-config" type="text">
+          <label for="cf-binary">Ruta del ejecutable cloudflared</label>
+          <input id="cf-binary" type="text">
+          <label for="cf-restart-method">Método para reiniciar el túnel</label>
+          <select id="cf-restart-method">
+            <option value="systemd-user">systemd (usuario, Linux)</option>
+            <option value="systemd-system">systemd (sistema, Linux)</option>
+            <option value="windows-service">Servicio de Windows</option>
+            <option value="manual">Manual (avisar solamente)</option>
+          </select>
+          <label for="cf-service">Nombre del servicio</label>
+          <input id="cf-service" type="text">
+          <button id="save-cf-settings-btn">Guardar opciones avanzadas</button>
+          <div id="cf-settings-msg" class="form-msg"></div>
+        </details>
+
+        <div id="cf-log" class="cf-log"></div>
+      </section>
+
+      <section class="card wide">
+        <h2>Transferencia de archivos</h2>
+        <p class="hint">
+          Sube o descarga archivos y carpetas entre tu navegador y este equipo,
+          igual que con un cliente FTP, a través de la misma conexión segura.
+        </p>
+        <div class="file-toolbar">
+          <span id="fm-breadcrumb" class="breadcrumb"></span>
+          <span class="spacer"></span>
+          <button id="fm-upload-btn">Subir archivo(s)</button>
+          <input id="fm-upload-input" type="file" multiple hidden>
+          <button id="fm-mkdir-btn">Nueva carpeta</button>
+          <button id="fm-download-folder-btn">Descargar carpeta (.zip)</button>
+          <button id="fm-refresh-btn">Actualizar</button>
+        </div>
+        <div id="fm-msg" class="form-msg"></div>
+        <table class="file-table">
+          <thead>
+            <tr><th></th><th>Nombre</th><th>Tamaño</th><th>Modificado</th><th></th></tr>
+          </thead>
+          <tbody id="fm-table-body"></tbody>
+        </table>
+      </section>
+
+    </div>
+  </main>
+
+  <script>window.APP_VERSION = "{{ app_version }}";</script>
+  <script src="{{ asset_url('js/socket.io.min.js') }}"></script>
+  <script src="{{ asset_url('js/viewer.js') }}"></script>
+  <script src="{{ asset_url('js/settings.js') }}"></script>
+  <script src="{{ asset_url('js/devices.js') }}"></script>
+</body>
+</html>

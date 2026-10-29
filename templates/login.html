@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acceso · Escritorio Remoto</title>
+  <link rel="stylesheet" href="{{ asset_url('css/style.css') }}">
+</head>
+<body class="login-body">
+  <form class="login-card" method="post" action="{{ url_for('login') }}" autocomplete="off">
+    <h1>Escritorio Remoto</h1>
+    <p class="subtitle">Introduce tus credenciales para continuar</p>
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+    <label for="username">Usuario</label>
+    <input id="username" name="username" type="text" autofocus required>
+    <label for="password">Contraseña</label>
+    <input id="password" name="password" type="password" required>
+    <button type="submit">Conectar</button>
+  </form>
+</body>
+</html>

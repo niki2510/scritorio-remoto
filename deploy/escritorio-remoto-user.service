@@ -1,0 +1,16 @@
+[Unit]
+Description=Escritorio Remoto (Flask)
+After=graphical-session.target network-online.target
+
+[Service]
+Type=simple
+# Ajusta estas rutas a tu instalación.
+WorkingDirectory=/ruta/a/escritorio-remoto
+Environment=DISPLAY=:1
+Environment=XAUTHORITY=/run/user/%U/gdm/Xauthority
+ExecStart=/ruta/a/escritorio-remoto/venv/bin/python /ruta/a/escritorio-remoto/app.py
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target

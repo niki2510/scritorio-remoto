@@ -1,0 +1,14 @@
+[Unit]
+Description=Agente de dispositivos de Escritorio Remoto
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/escritorio-remoto-agent.env
+ExecStart=/usr/bin/python3 /opt/escritorio-remoto-agent/device-agent.pyz
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
