@@ -120,7 +120,7 @@ y `RDWEB_AGENT_TOKEN` en `/etc/escritorio-remoto-agent.env`.
 ### Linux / Ubuntu
 
 ```bash
-git clone <este-repositorio> escritorio-remoto
+git clone https://github.com/robotcamptecnologico-gif/escritorio-remoto-bravo.git escritorio-remoto
 cd escritorio-remoto
 ./run.sh
 ```
@@ -132,7 +132,7 @@ en consola un usuario y contraseña generados automáticamente.
 ### Windows
 
 ```bat
-git clone <este-repositorio> escritorio-remoto
+git clone https://github.com/robotcamptecnologico-gif/escritorio-remoto-bravo.git escritorio-remoto
 cd escritorio-remoto
 run.bat
 ```
